@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heart Burst Animation</title>
+  <style>
+    :root {
+      --bubble-d: 4.5rem;
+      --bubble-r: 2.25rem;
+      --sparkle-d: 0.375rem;
+      --sparkle-r: 0.1875rem;
+      --heart-color: #fa6304;
+      --heart-gray: #6A7278;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #121721, #000);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    /* Hide the checkbox */
+    #toggle-heart {
+      position: absolute;
+      left: -100vw;
+    }
+
+    /* Heart label container */
+    [for='toggle-heart'] {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* The heart SVG */
+    .heart-icon {
+      width: 48px;
+      height: 48px;
+      transition: transform 0.1s ease;
+    }
+
+    .heart-icon path {
+      stroke: var(--heart-gray);
+      fill: transparent;
+      transition: fill 0.3s ease, stroke 0.3s ease;
+    }
+
+    /* Bubble effect - the expanding ring */
+    [for='toggle-heart']::before {
+      content: '';
+      position: absolute;
+      z-index: -1;
+      top: 50%;
+      left: 50%;
+      width: var(--bubble-d);
+      height: var(--bubble-d);
+      margin-top: calc(var(--bubble-r) * -1);
+      margin-left: calc(var(--bubble-r) * -1);
+      border-radius: 50%;
+      border: solid var(--bubble-r) var(--heart-color);
+      box-sizing: border-box;
+      transform: scale(0);
+    }
+
+    /* Sparkles container */
+    [for='toggle-heart']::after {
+      content: '';
+      position: absolute;
+      z-index: -1;
+      top: 50%;
+      left: 50%;
+      width: var(--sparkle-d);
+      height: var(--sparkle-d);
+      margin-top: calc(var(--sparkle-r) * -1);
+      margin-left: calc(var(--sparkle-r) * -1);
+      border-radius: 50%;
+      /* Initial sparkle positions (k=1, spread outward) */
+      box-shadow: 
+        /* Group 0 - top */
+        0.23rem -2.87rem 0 -0.1875rem hsl(0, 100%, 75%),
+        -0.23rem -2.87rem 0 -0.1875rem hsl(51deg, 100%, 75%),
+        /* Group 1 */
+        2.34rem -1.7rem 0 -0.1875rem hsl(51deg, 100%, 75%),
+        2.58rem -1.17rem 0 -0.1875rem hsl(103deg, 100%, 75%),
+        /* Group 2 */
+        2.85rem 0.84rem 0 -0.1875rem hsl(103deg, 100%, 75%),
+        2.34rem 1.7rem 0 -0.1875rem hsl(154deg, 100%, 75%),
+        /* Group 3 */
+        1.17rem 2.58rem 0 -0.1875rem hsl(154deg, 100%, 75%),
+        0.23rem 2.87rem 0 -0.1875rem hsl(206deg, 100%, 75%),
+        /* Group 4 */
+        -1.17rem 2.58rem 0 -0.1875rem hsl(206deg, 100%, 75%),
+        -2.07rem 1.97rem 0 -0.1875rem hsl(257deg, 100%, 75%),
+        /* Group 5 */
+        -2.85rem 0.23rem 0 -0.1875rem hsl(257deg, 100%, 75%),
+        -2.58rem -0.84rem 0 -0.1875rem hsl(309deg, 100%, 75%),
+        /* Group 6 */
+        -2.07rem -1.97rem 0 -0.1875rem hsl(309deg, 100%, 75%),
+        -1.17rem -2.58rem 0 -0.1875rem hsl(360deg, 100%, 75%);
+      opacity: 0;
+    }
+
+    /* Checked state - heart filled */
+    #toggle-heart:checked + [for='toggle-heart'] .heart-icon path {
+      fill: var(--heart-color);
+      stroke: var(--heart-color);
+    }
+
+    #toggle-heart:checked + [for='toggle-heart'] .heart-icon {
+      animation: heart 1s cubic-bezier(.17, .89, .32, 1.49);
+    }
+
+    #toggle-heart:checked + [for='toggle-heart']::before {
+      animation: bubble 1s cubic-bezier(.17, .89, .32, 1.49);
+    }
+
+    #toggle-heart:checked + [for='toggle-heart']::after {
+      animation: sparkles 1s ease-out;
+    }
+
+
+    /* Hover state */
+    [for='toggle-heart']:hover .heart-icon {
+      transform: scale(1.1);
+    }
+
+    [for='toggle-heart']:active .heart-icon {
+      transform: scale(0.95);
+    }
+
+    /* Heart animation - scales down then back up */
+    @keyframes heart {
+      0%, 17.5% {
+        transform: scale(0);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    /* Bubble animation - expands and fades */
+    @keyframes bubble {
+      0% {
+        transform: scale(0);
+        border-width: var(--bubble-r);
+        border-color: var(--heart-color);
+      }
+      15% {
+        transform: scale(1);
+        border-width: var(--bubble-r);
+        border-color: var(--heart-color);
+      }
+      30%, 100% {
+        transform: scale(1);
+        border-width: 0;
+        border-color: var(--heart-color);
+      }
+    }
+
+    /* Sparkles animation - appear and spread outward */
+    @keyframes sparkles {
+      0%, 20% {
+        opacity: 0;
+      }
+      25% {
+        opacity: 1;
+        /* Sparkle positions at k=0 (closer to center) */
+        box-shadow: 
+          /* Group 0 */
+          0.19rem -2.29rem 0 0 hsl(0, 100%, 75%),
+          -0.19rem -2.29rem 0 0 hsl(51deg, 100%, 75%),
+          /* Group 1 */
+          1.87rem -1.36rem 0 0 hsl(51deg, 100%, 75%),
+          2.06rem -0.94rem 0 0 hsl(103deg, 100%, 75%),
+          /* Group 2 */
+          2.28rem 0.67rem 0 0 hsl(103deg, 100%, 75%),
+          1.87rem 1.36rem 0 0 hsl(154deg, 100%, 75%),
+          /* Group 3 */
+          0.94rem 2.06rem 0 0 hsl(154deg, 100%, 75%),
+          0.19rem 2.29rem 0 0 hsl(206deg, 100%, 75%),
+          /* Group 4 */
+          -0.94rem 2.06rem 0 0 hsl(206deg, 100%, 75%),
+          -1.66rem 1.58rem 0 0 hsl(257deg, 100%, 75%),
+          /* Group 5 */
+          -2.28rem 0.19rem 0 0 hsl(257deg, 100%, 75%),
+          -2.06rem -0.67rem 0 0 hsl(309deg, 100%, 75%),
+          /* Group 6 */
+          -1.66rem -1.58rem 0 0 hsl(309deg, 100%, 75%),
+          -0.94rem -2.06rem 0 0 hsl(360deg, 100%, 75%);
+      }
+      100% {
+        opacity: 0;
+        /* Sparkles spread further out and shrink */
+        box-shadow: 
+          /* Group 0 */
+          0.23rem -2.87rem 0 -0.1875rem hsl(0, 100%, 75%),
+          -0.23rem -2.87rem 0 -0.1875rem hsl(51deg, 100%, 75%),
+          /* Group 1 */
+          2.34rem -1.7rem 0 -0.1875rem hsl(51deg, 100%, 75%),
+          2.58rem -1.17rem 0 -0.1875rem hsl(103deg, 100%, 75%),
+          /* Group 2 */
+          2.85rem 0.84rem 0 -0.1875rem hsl(103deg, 100%, 75%),
+          2.34rem 1.7rem 0 -0.1875rem hsl(154deg, 100%, 75%),
+          /* Group 3 */
+          1.17rem 2.58rem 0 -0.1875rem hsl(154deg, 100%, 75%),
+          0.23rem 2.87rem 0 -0.1875rem hsl(206deg, 100%, 75%),
+          /* Group 4 */
+          -1.17rem 2.58rem 0 -0.1875rem hsl(206deg, 100%, 75%),
+          -2.07rem 1.97rem 0 -0.1875rem hsl(257deg, 100%, 75%),
+          /* Group 5 */
+          -2.85rem 0.23rem 0 -0.1875rem hsl(257deg, 100%, 75%),
+          -2.58rem -0.84rem 0 -0.1875rem hsl(309deg, 100%, 75%),
+          /* Group 6 */
+          -2.07rem -1.97rem 0 -0.1875rem hsl(309deg, 100%, 75%),
+          -1.17rem -2.58rem 0 -0.1875rem hsl(360deg, 100%, 75%);
+      }
+    }
+
+    /* Optional: Add some text below */
+    .demo-text {
+      position: fixed;
+      bottom: 2rem;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.875rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <input type="checkbox" id="toggle-heart">
+  <label for="toggle-heart">
+    <svg class="heart-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16.6274 11.2038L11.4111 16.553C10.6376 17.3462 9.36244 17.3462 8.58894 16.553L3.37258 11.2038C1.54247 9.32705 1.54247 6.28427 3.37258 4.40754C5.20269 2.53082 8.16989 2.53082 10 4.40754C11.8301 2.53082 14.7973 2.53082 16.6274 4.40754C18.4575 6.28427 18.4575 9.32705 16.6274 11.2038Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </label>
+
+  <p class="demo-text">Click the heart</p>
+</body>
+</html>
+
