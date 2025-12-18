@@ -63,6 +63,10 @@ struct HeartBurstButton: View {
     @State private var isLiked = false
     @State private var isPressed = false
     @State private var heartScale: CGFloat = 1.0
+    @State private var heartFlip: Double = 0  // For backflip (3D rotation on X-axis)
+    @State private var heartOffsetY: CGFloat = 0  // For jump effect
+    @State private var pressScale: CGFloat = 1.0  // Shrinks while holding
+    @State private var pressStartTime: Date? = nil
     @State private var ringScale: CGFloat = 0
     @State private var ringOpacity: Double = 0
     @State private var ringLineWidth: CGFloat = 24
@@ -80,7 +84,7 @@ struct HeartBurstButton: View {
     // Regenerate sparkles with randomization on each tap
     @State private var sparkles: [SparkleData] = []
     
-    func generateSparkles() -> [SparkleData] {
+    func generateSparkles(pressDuration: Double) -> [SparkleData] {
         var result: [SparkleData] = []
         let nGroups = 7
         let nSparklesPerGroup = 2
@@ -91,6 +95,16 @@ struct HeartBurstButton: View {
         let bubbleRadius: CGFloat = 24
         let sparkleDistance: CGFloat = 5
         
+        // Distance multiplier scales same as heart: 3s=200%, 4s=300%, 5s+=400%
+        let distanceMultiplier: CGFloat
+        if pressDuration < 3 {
+            distanceMultiplier = 1.0 + (0.1 * pressDuration)  // Subtle under 3s
+        } else if pressDuration < 5 {
+            distanceMultiplier = 2.0 + ((pressDuration - 3) * 1.0)  // 3s=2x, 4s=3x
+        } else {
+            distanceMultiplier = 4.0  // Max at 4x
+        }
+        
         for i in 0..<nGroups {
             // Add slight random angle variation (-8 to +8 degrees)
             let angleVariation = Double.random(in: -8...8)
@@ -98,8 +112,8 @@ struct HeartBurstButton: View {
             
             // Randomize start and end radius slightly
             let startGroupR = bubbleRadius + CGFloat.random(in: -2...2)
-            let endMultiplier = CGFloat.random(in: 1.1...1.2)
-            let endGroupR = bubbleRadius * endMultiplier
+            let baseEndMultiplier = CGFloat.random(in: 1.1...1.2)
+            let endGroupR = bubbleRadius * baseEndMultiplier * distanceMultiplier
             
             for j in 0..<nSparklesPerGroup {
                 let sparkleAngle = groupAngle + sparkleOffAngle + Double(j) * sparkleBaseAngle
@@ -165,8 +179,9 @@ struct HeartBurstButton: View {
                         .stroke(isLiked ? heartColor : outlineColor, lineWidth: 1.5)
                 )
                 .frame(width: 24, height: 24)
-                .scaleEffect(heartScale * (isPressed ? 0.9 : 1.0))
-                .animation(.easeOut(duration: 0.1), value: isPressed)
+                .scaleEffect(heartScale * pressScale)
+                .rotation3DEffect(.degrees(heartFlip), axis: (x: 0, y: 1, z: 0))
+                .offset(y: heartOffsetY)
         }
         .frame(width: 120, height: 120)
         .contentShape(Rectangle())
@@ -175,22 +190,36 @@ struct HeartBurstButton: View {
                 .onChanged { _ in
                     if !isPressed {
                         isPressed = true
+                        pressStartTime = Date()
                         lightFeedback.impactOccurred()
+                        
+                        // Normal press down feel
+                        withAnimation(.easeOut(duration: 0.1)) {
+                            pressScale = 0.9
+                        }
                     }
                 }
                 .onEnded { _ in
+                    let pressDuration = pressStartTime.map { Date().timeIntervalSince($0) } ?? 0
                     isPressed = false
-                    toggleLike()
+                    pressStartTime = nil
+                    
+                    // Reset press scale
+                    withAnimation(.easeOut(duration: 0.1)) {
+                        pressScale = 1.0
+                    }
+                    
+                    toggleLike(pressDuration: pressDuration)
                 }
         )
         .onAppear {
             impactFeedback.prepare()
             lightFeedback.prepare()
-            sparkles = generateSparkles()
+            sparkles = generateSparkles(pressDuration: 0)
         }
     }
     
-    private func toggleLike() {
+    private func toggleLike(pressDuration: Double) {
         if isLiked {
             // Unlike
             lightFeedback.impactOccurred()
@@ -202,8 +231,12 @@ struct HeartBurstButton: View {
             impactFeedback.impactOccurred()
             isLiked = true
             
-            // Generate new random sparkles
-            sparkles = generateSparkles()
+            // Intensity scales with hold duration
+            let seconds = pressDuration
+            let isSpecialFlip = seconds >= 5
+            
+            // Generate sparkles (distance scales only for 5s+ special flip)
+            sparkles = generateSparkles(pressDuration: isSpecialFlip ? seconds : 0)
             
             // Reset states
             ringScale = 0
@@ -212,6 +245,8 @@ struct HeartBurstButton: View {
             sparkleProgress = 0
             sparkleAnimating = false
             sparkleScale = 1.0
+            heartFlip = 0
+            heartOffsetY = 0
             
             // 1. Heart shrinks
             withAnimation(.easeIn(duration: 0.1)) {
@@ -229,9 +264,41 @@ struct HeartBurstButton: View {
                 ringOpacity = 0
             }
             
-            // 3. Heart pops back with extra bouncy spring
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.4, blendDuration: 0).delay(0.1)) {
-                heartScale = 1
+            // 3. Heart pops back
+            if isSpecialFlip {
+                // 5s+ SURPRISE: Hop and flip!
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.6, blendDuration: 0).delay(0.1)) {
+                    heartScale = 1.0
+                }
+                
+                // Hop and flip - smooth with hang time at top
+                let easeOutExpo = Animation.timingCurve(0.16, 1, 0.3, 1, duration: 0.35)
+                let easeInExpo = Animation.timingCurve(0.7, 0, 0.84, 0, duration: 0.3)
+                
+                // Up movement
+                withAnimation(easeOutExpo) {
+                    heartOffsetY = -15
+                }
+                // Pause at top, then down
+                withAnimation(easeInExpo.delay(0.5)) {
+                    heartOffsetY = 0
+                }
+                
+                // Single 180° flip - gentle start, subtle slowdown at top, speeds up at end
+                let flipCurve = Animation.timingCurve(0.4, 0.1, 0.7, 0.5, duration: 0.8)
+                
+                withAnimation(flipCurve) {
+                    heartFlip = 180
+                }
+                // Reset flip after landing
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.85) {
+                    heartFlip = 0
+                }
+            } else {
+                // Normal tap: simple bouncy pop
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.4, blendDuration: 0).delay(0.1)) {
+                    heartScale = 1.0
+                }
             }
             
             // 4. Sparkles appear and animate out
