@@ -284,8 +284,8 @@ struct HeartBurstButton: View {
                     heartOffsetY = 0
                 }
                 
-                // Single 180° flip - gentle start, subtle slowdown at top, speeds up at end
-                let flipCurve = Animation.timingCurve(0.4, 0.1, 0.7, 0.5, duration: 0.8)
+                // Single 180° flip - slow for longer, speeds up at the very end
+                let flipCurve = Animation.timingCurve(0.5, 0.05, 0.9, 0.3, duration: 0.8)
                 
                 withAnimation(flipCurve) {
                     heartFlip = 180
